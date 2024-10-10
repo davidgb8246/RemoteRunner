@@ -6,6 +6,7 @@ Un script que permite ejecutar scripts en equipos remotos.
 - Iniciador de la herramienta integrado.
 - Instalación automática de dependencias. (Solicita permiso al usuario)
 - Instalación automática de una clave SSH en los equipos remotos.
+- Autopurga de duplicados del fichero de clientes y resolución de dominios.
 - Ejecución de scripts de manera simultánea.
 - Registro de logs de los scripts ejecutados.
 
@@ -59,13 +60,17 @@ scripts.<br><br>
 
 Ejemplo de configuración del fichero `data/.targets`:
 ```yaml
+pc-01.ejemplo.com
+pc-02.ejemplo.com
+pc-03.ejemplo.com
 192.168.15.2
 192.168.15.3
 192.168.15.4
 ```
 
-Donde cada línea representa la dirección IP de uno de los clientes. Aunque se
-repita alguna dirección IP, los scripts solo se ejecutarán una vez por cliente.
+Donde cada línea representa la **dirección IP** o **dominio** de uno de los
+clientes. Si hay varias entradas que acaban apuntando al mismo cliente,
+los scripts solo se ejecutarán una vez por cada uno de los clientes.
 
 
 ### Paso 4 (opcional):
