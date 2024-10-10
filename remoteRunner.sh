@@ -222,7 +222,7 @@ main() {
     echo "---------------   >>>   EJECUTANDO SCRIPT \"$script_name\"   <<<   ---------------"
 
     for client in "${TARGETS[@]}"; do
-      current_logfile="$LOGS_PATH/$client\_$script_name.log" # Genera el nombre del log.
+      current_logfile="$LOGS_PATH/${client}_${script_name}.log" # Genera el nombre del log.
 
       # En caso de que el fichero de log ya exista, lo borraremos para
       # que no se junten logs de antiguas ejecuciones.
