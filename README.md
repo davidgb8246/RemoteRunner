@@ -6,7 +6,8 @@ Un script que permite ejecutar scripts en equipos remotos.
 - Iniciador de la herramienta integrado.
 - Instalación automática de dependencias. (Solicita permiso al usuario)
 - Instalación automática de una clave SSH en los equipos remotos.
-- Autopurga de duplicados del fichero de clientes y resolución de dominios.
+- Soporte completo para la utilización de dominios.
+- Auto purga de duplicados del fichero de clientes.
 - Ejecución de scripts de manera simultánea.
 - Registro de logs de los scripts ejecutados.
 
