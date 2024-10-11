@@ -19,6 +19,8 @@ SCRIPTS_PATH="$RUNNING_PATH/scripts"
 DATA_PATH="$RUNNING_PATH/data"
 LOGS_PATH="$RUNNING_PATH/logs"
 LOGS_HISTORY_PATH="$LOGS_PATH/history"
+IP_REGEX='^(0*(1?[0-9]{1,2}|2([0-4][0-9]|5[0-5]))\.){3}0*(1?[0-9]{1,2}|2([0-4][0-9]|5[0-5]))$'
+DOMAIN_RESOLUTION_TRIES=2
 
 
 : '
@@ -37,12 +39,11 @@ ejecutará para poder obtener la dirección IP.
 resolve_domain() {
   local domain=$1
   local timeout=$2
+  local current_ip=""
+  local tries=0
 
-  local current_ip=$(dig +short "$domain" | grep -v "communications error")
-
-  tries=1
   while [ "$current_ip" == "" ] && [ "$tries" -lt "$timeout" ]; do
-    current_ip=$(dig +short "$domain" | grep -v "communications error")
+    current_ip=$(dig +short +time=2 "$domain" | grep -v "timed out" | grep -v "no servers" | grep -E "$IP_REGEX")
     ((tries++))
   done
 
@@ -85,41 +86,50 @@ El fichero que contiene las ips está en: data/.targets
 '
 load_targets() {
   local -n targets_list=$1
-  local targets_file_content=$(awk '!seen[$0]++' "$DATA_PATH/.targets")
-  local IP_REGEX='^(0*(1?[0-9]{1,2}|2([0-4][0-9]|5[0-5]))\.){3}0*(1?[0-9]{1,2}|2([0-4][0-9]|5[0-5]))$'
+  local targets_file_content=$(awk '!seen[$0]++' "$DATA_PATH/.targets") # Recupera los datos sin repetidos aparentes.
   local current_ip
   local current_domain_ip
-
-  if [ "$(echo "$targets_file_content" | grep -v '^$' | wc -l)" -eq 0 ]; then
-    echo "ERROR: No hay ips de clientes para que ejecuten los scripts."
-    exit 7
-  fi
 
   for target in $targets_file_content; do
     local index=0
     local length=${#targets_list[@]}
     local found=false
 
+    # Si el target actual es un dominio, comprueba si conoce su
+    # dirección IP, si no la conoce, saltará al siguiente.
+    if ! [[ $target =~ $IP_REGEX ]]; then
+      current_domain_ip="$(resolve_domain "$target" "$DOMAIN_RESOLUTION_TRIES")"
+
+      if [ "$current_domain_ip" == "" ]; then
+        echo "WARN: No se pudo obtener la dirección IP del cliente \"$target\"."
+        continue
+      fi
+    fi
+
+    # Itera el array de clientes para comprobar que no haya
+    # repetidos aunque no coincidan sus referencias.
     while [ "$index" -lt "$length" ] && [ "$found" = false ]; do
       current_target=${targets_list[$index]}
 
       if [[ $target =~ $IP_REGEX ]]; then
-        # comprobar dominios para ver si tienen la misma ip que target.
+        # Si la referencia actual del fichero de clientes es una dirección IP,
+        # se comprobarán todos los dominios, ya introducidos dentro del array
+        # de clientes, para ver si ambos contienen la misma dirección IP.
         if ! [[ $current_target =~ $IP_REGEX ]]; then
-          current_ip="$(resolve_domain "$current_target")"
+          current_ip="$(resolve_domain "$current_target" "$DOMAIN_RESOLUTION_TRIES")"
 
           if [ "$target" == "$current_ip" ]; then
             found=true
           fi
         fi
       else
-        # comprobar ips para ver si tienen la misma ip que el dominio en target
-        current_domain_ip="$(resolve_domain "$target")"
-
+        # Si la referencia actual del fichero de clientes es un dominio, se comprobarán
+        # todas las IPs y dominios, ya introducidos dentro del array de clientes,
+        # para ver si ambos contienen la misma dirección IP.
         if [[ $current_target =~ $IP_REGEX ]]; then
           current_ip="$current_target"
         else
-          current_ip="$(resolve_domain "$current_target")"
+          current_ip="$(resolve_domain "$current_target" "$DOMAIN_RESOLUTION_TRIES")"
         fi
 
         if [ "$current_domain_ip" == "$current_ip" ]; then
@@ -135,6 +145,11 @@ load_targets() {
       targets_list+=("$target")
     fi
   done
+
+  if [ "${#targets_list[@]}" -eq 0 ]; then
+    echo "ERROR: No hay clientes para que ejecuten los scripts."
+    exit 7
+  fi
 }
 
 
@@ -242,7 +257,7 @@ main() {
         echo '$REMOTE_PASS' | ssh -i '$REMOTE_KEY_PATH' -tt '$REMOTE_USER@$client' \"echo '$encoded_script' | base64 -d | sudo bash -s\" && echo 'RUN-STATUS: OK' || echo 'RUN-STATUS: FAILED'
         "
       else
-        echo "WARN: El cliente $client está offline o no se encuentra accesible. Saltando al siguiente cliente..."
+        echo "WARN: El cliente \"$client\" está offline o no se encuentra accesible. Saltando al siguiente cliente..."
       fi
     done
 
