@@ -6,7 +6,7 @@ CÓDIGOS DE ERROR
 1: Este código se lanzará cuando se ejecute el script con sudo o root.
 2: Este código se lanzará cuando se ejecute el script sin argumentos o con un argumento inválido.
 3: Este código se lanzará cuando se ejecute el script sin haber inicializado la herramienta.
-4: Este código se lanzará cuando se rechace la instalación de alguna dependencia necesaria.
+4: Este código se lanzará cuando se rechace o falle la instalación de alguna dependencia necesaria.
 5: Este código se lanzará cuando se establezca algún dato inválido en el fichero de credenciales.
 6: Este código se lanzará cuando no haya ningún script a ejecutar en el directorio de scripts.
 7: Este código se lanzará cuando no haya ningún cliente a ejecutar scripts en el fichero de targets.
@@ -27,7 +27,7 @@ DOMAIN_RESOLUTION_TRIES=2
 Esta función genera una cadena con la fecha actual exacta.
 '
 generate_timestamp() {
-    date +"%Y-%m-%dT%H%M%S%z" | sed 's/+/-/'
+  date +"%Y-%m-%dT%H%M%S%z" | sed 's/+/-/'
 }
 
 
@@ -137,7 +137,7 @@ load_targets() {
         fi
       fi
 
-        ((index++))
+      ((index++))
     done
 
 
@@ -201,6 +201,13 @@ main() {
       sudo apt-get -y install screen
     else
       echo "ERROR: Para hacer más rápido la ejecución de scripts se necesita ese paquete."
+      exit 4
+    fi
+
+    # Comprueba si se ha instalado correctamente la dependencia. En caso
+    # de que no se instale, el script finalizará.
+    if ! command -v screen &> /dev/null; then
+      echo "ERROR: No se ha podido instalar el paquete screen. Instalalo a mano o intentalo de nuevo usando el script."
       exit 4
     fi
   fi
@@ -338,16 +345,23 @@ init-targets() {
   # preguntará al usuario si la quiere instalar, y en caso de no instalarla,
   # el script finalizará.
   if ! command -v sshpass &> /dev/null; then
-      echo "INFO: El paquete sshpass servirá para enviar la contraseña a los clientes para instalar la SSH KEY."
-      read -rp "INFO: El paquete sshpass no está instalado. ¿Quieres instalarlo? [Y/N]: " opt
+    echo "INFO: El paquete sshpass servirá para enviar la contraseña a los clientes para instalar la SSH KEY."
+    read -rp "INFO: El paquete sshpass no está instalado. ¿Quieres instalarlo? [Y/N]: " opt
 
-      if [ "${opt^^}" == "Y" ]; then
-        sudo apt-get update
-        sudo apt-get -y install sshpass
-      else
-        echo "ERROR: Para hacer la instalación automática de la SSH KEY en los clientes se necesita ese paquete."
-        exit 4
-      fi
+    if [ "${opt^^}" == "Y" ]; then
+      sudo apt-get update
+      sudo apt-get -y install sshpass
+    else
+      echo "ERROR: Para hacer la instalación automática de la SSH KEY en los clientes se necesita ese paquete."
+      exit 4
+    fi
+
+    # Comprueba si se ha instalado correctamente la dependencia. En caso
+    # de que no se instale, el script finalizará.
+    if ! command -v sshpass &> /dev/null; then
+      echo "ERROR: No se ha podido instalar el paquete sshpass. Instalalo a mano o intentalo de nuevo usando el script."
+      exit 4
+    fi
   fi
 
   # Recupera de los ficheros los datos necesarios para instalar
