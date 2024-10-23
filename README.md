@@ -86,6 +86,15 @@ puede saltar y hacerlo manualmente o con otros métodos.
 ### Paso 5:
 Después, mete los scripts que quieras ejecutar en el directorio `scripts/`.
 
+> [!IMPORTANT]
+> Para considerar que un script se ha ejecutado correctamente, el log debe contener
+> al menos la cadena **"EXEC-STATUS: OK"**, denotando que se ha logrado
+> enviar el script al cliente y que debería de haber ido bien.
+> 
+> Para garantizar esta funcionalidad, se deberá programar todos los scripts, de
+> manera que cuando haya fallado algo, se deberá imprimir por pantalla la cadena
+> **"EXEC-STATUS: FAILED"** y finalizar el script. Si se ejecutó correctamente, la
+> última instrucción de cualquier script será un **"echo EXEC-STATUS: OK"**.
 
 ### Paso 6:
 Por último, ya se podría ejecutar el script con el argumento `start` para empezar
